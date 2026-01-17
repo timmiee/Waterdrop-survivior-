@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+  <title>Waterdrop Survivor</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #0b0e14;
+      overflow: hidden;
+      touch-action: none;
+    }
+    canvas {
+      display: block;
+    }
+    #ui {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      color: #8be9fd;
+      font-family: monospace;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <div id="ui">Alive</div>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+window.addEventListener("resize", resize);
+resize();
+
+const player = {
+  x: canvas.width / 2,
+  y: canvas.height / 2,
+  r: 12,
+  speed: 4
+};
+
+let enemies = [];
+let touches = {};
+let alive = true;
+let timeAlive = 0;
+
+function spawnEnemy() {
+  const edge = Math.floor(Math.random() * 4);
+  let x, y;
+
+  if (edge === 0) { x = 0; y = Math.random() * canvas.height; }
+  if (edge === 1) { x = canvas.width; y = Math.random() * canvas.height; }
+  if (edge === 2) { x = Math.random() * canvas.width; y = 0; }
+  if (edge === 3) { x = Math.random() * canvas.width; y = canvas.height; }
+
+  enemies.push({ x, y, r: 10, speed: 1 + Math.random() });
+}
+
+setInterval(spawnEnemy, 800);
+
+window.addEventListener("touchstart", e => {
+  for (const t of e.touches) touches[t.identifier] = t;
+});
+window.addEventListener("touchmove", e => {
+  for (const t of e.touches) touches[t.identifier] = t;
+});
+window.addEventListener("touchend", e => {
+  for (const t of e.changedTouches) delete touches[t.identifier];
+});
+
+function update() {
+  if (!alive) return;
+
+  timeAlive += 1 / 60;
+
+  const t = Object.values(touches)[0];
+  if (t) {
+    const dx = t.clientX - player.x;
+    const dy = t.clientY - player.y;
+    const len = Math.hypot(dx, dy) || 1;
+    player.x += (dx / len) * player.speed;
+    player.y += (dy / len) * player.speed;
+  }
+
+  for (const e of enemies) {
+    const dx = player.x - e.x;
+    const dy = player.y - e.y;
+    const len = Math.hypot(dx, dy) || 1;
+    e.x += (dx / len) * e.speed;
+    e.y += (dy / len) * e.speed;
+
+    if (len < player.r + e.r) {
+      alive = false;
+      document.getElementById("ui").innerText =
+        "Game Over – överlevde " + timeAlive.toFixed(1) + " sek";
+    }
+  }
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = "#50fa7b";
+  ctx.beginPath();
+  ctx.arc(player.x, player.y, player.r, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#ff5555";
+  for (const e of enemies) {
+    ctx.beginPath();
+    ctx.arc(e.x, e.y, e.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>
